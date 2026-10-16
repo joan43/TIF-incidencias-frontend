@@ -1,7 +1,5 @@
-import { useState } from "react";
-import { api } from "../api";
-
-const CATEGORIES = ["Hardware", "Software", "Red", "Accesos", "Correo", "Impresora", "Otro"];
+import { useEffect, useState } from "react";
+import { api, Category } from "../api";
 
 interface Props {
   onSuccess: (id: number) => void;
@@ -11,20 +9,33 @@ interface Props {
 export default function NewIncident({ onSuccess, onCancel }: Props) {
   const [titulo, setTitulo] = useState("");
   const [descripcion, setDescripcion] = useState("");
-  const [categoria, setCategoria] = useState("");
+  const [categoriaId, setCategoriaId] = useState("");
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loadingCategories, setLoadingCategories] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [validated, setValidated] = useState(false);
 
+  useEffect(() => {
+    let active = true;
+    api.getCategories()
+      .then((items) => { if (active) setCategories(items); })
+      .catch((err: unknown) => {
+        if (active) setError(err instanceof Error ? err.message : "No se pudieron cargar las categorías");
+      })
+      .finally(() => { if (active) setLoadingCategories(false); });
+    return () => { active = false; };
+  }, []);
+
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setValidated(true);
-    if (!titulo.trim() || !descripcion.trim() || !categoria) return;
+    if (titulo.trim().length < 3 || descripcion.trim().length < 5 || !categoriaId) return;
 
     setError("");
     setLoading(true);
     try {
-      const res = await api.createIncident({ titulo: titulo.trim(), descripcion: descripcion.trim(), categoria });
+      const res = await api.createIncident({ title: titulo.trim(), description: descripcion.trim(), category_id: Number(categoriaId) });
       onSuccess(res.data.id);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Error al crear la incidencia");
@@ -71,16 +82,16 @@ export default function NewIncident({ onSuccess, onCancel }: Props) {
                   <input
                     id="titulo"
                     type="text"
-                    className={`form-control${validated && !titulo.trim() ? " is-invalid" : ""}`}
+                    className={`form-control${validated && titulo.trim().length < 3 ? " is-invalid" : ""}`}
                     placeholder="Describe brevemente el problema"
                     value={titulo}
                     onChange={(e) => setTitulo(e.target.value)}
-                    maxLength={120}
+                    maxLength={180}
                   />
-                  {validated && !titulo.trim() && (
-                    <div className="invalid-feedback">El título es obligatorio.</div>
+                  {validated && titulo.trim().length < 3 && (
+                    <div className="invalid-feedback">El título debe tener al menos 3 caracteres.</div>
                   )}
-                  <div className="form-text">{titulo.length}/120 caracteres</div>
+                  <div className="form-text">{titulo.length}/180 caracteres</div>
                 </div>
 
                 <div className="mb-4">
@@ -89,17 +100,18 @@ export default function NewIncident({ onSuccess, onCancel }: Props) {
                   </label>
                   <select
                     id="categoria"
-                    className={`form-select${validated && !categoria ? " is-invalid" : ""}`}
-                    value={categoria}
-                    onChange={(e) => setCategoria(e.target.value)}
+                    className={`form-select${validated && !categoriaId ? " is-invalid" : ""}`}
+                    value={categoriaId}
+                    onChange={(e) => setCategoriaId(e.target.value)}
+                    disabled={loadingCategories || categories.length === 0}
                   >
-                    <option value="">Selecciona una categoría...</option>
-                    {CATEGORIES.map((c) => (
-                      <option key={c} value={c}>{c}</option>
+                    <option value="">{loadingCategories ? "Cargando categorías..." : "Selecciona una categoría..."}</option>
+                    {categories.map((category) => (
+                      <option key={category.id} value={category.id}>{category.name}</option>
                     ))}
                   </select>
-                  {validated && !categoria && (
-                    <div className="invalid-feedback">Selecciona una categoría.</div>
+                  {validated && !categoriaId && (
+                    <div className="invalid-feedback">Seleccioná una categoría.</div>
                   )}
                 </div>
 
@@ -109,14 +121,14 @@ export default function NewIncident({ onSuccess, onCancel }: Props) {
                   </label>
                   <textarea
                     id="descripcion"
-                    className={`form-control${validated && !descripcion.trim() ? " is-invalid" : ""}`}
+                    className={`form-control${validated && descripcion.trim().length < 5 ? " is-invalid" : ""}`}
                     rows={5}
                     placeholder="Detalla el problema: cuándo ocurrió, qué pasos lo reproducen, qué error aparece..."
                     value={descripcion}
                     onChange={(e) => setDescripcion(e.target.value)}
                   />
-                  {validated && !descripcion.trim() && (
-                    <div className="invalid-feedback">La descripción es obligatoria.</div>
+                  {validated && descripcion.trim().length < 5 && (
+                    <div className="invalid-feedback">La descripción debe tener al menos 5 caracteres.</div>
                   )}
                 </div>
 
@@ -124,7 +136,7 @@ export default function NewIncident({ onSuccess, onCancel }: Props) {
                   <button
                     type="submit"
                     className="btn btn-primary d-flex align-items-center gap-2"
-                    disabled={loading}
+                    disabled={loading || loadingCategories || categories.length === 0}
                     style={{ fontWeight: 600 }}
                   >
                     {loading ? (

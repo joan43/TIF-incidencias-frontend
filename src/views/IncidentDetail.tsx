@@ -5,7 +5,6 @@ const STATUS_LABELS: Record<string, string> = {
   abierta: "Abierta",
   en_proceso: "En proceso",
   resuelta: "Resuelta",
-  cerrada: "Cerrada",
 };
 
 function StatusBadge({ estado }: { estado: string }) {
@@ -17,7 +16,7 @@ function StatusBadge({ estado }: { estado: string }) {
 }
 
 function formatDateTime(iso: string) {
-  return new Date(iso).toLocaleString("es-ES", {
+  return new Date(iso).toLocaleString("es-AR", {
     day: "2-digit",
     month: "short",
     year: "numeric",
@@ -95,23 +94,11 @@ export default function IncidentDetail({ incidentId, currentUser, onBack }: Prop
     }
   }
 
-  async function handleClose() {
-    setActionLoading(true);
-    setActionError("");
-    setActionSuccess("");
-    try {
-      const res = await api.closeIncident(incidentId);
-      setIncident(res.data);
-      setActionSuccess("Incidencia cerrada.");
-    } catch (err: unknown) {
-      setActionError(err instanceof Error ? err.message : "Error al cerrar la incidencia");
-    } finally {
-      setActionLoading(false);
-    }
-  }
 
   async function handleComment() {
     if (!commentText.trim()) return;
+    setActionError("");
+    setActionSuccess("");
     setCommentLoading(true);
     try {
       const res = await api.addComment(incidentId, commentText.trim());
@@ -126,12 +113,10 @@ export default function IncidentDetail({ incidentId, currentUser, onBack }: Prop
     }
   }
 
-  const isTecnico = currentUser.role === "tecnico" || currentUser.role === "admin";
-  const isAdmin = currentUser.role === "admin";
+  const isTecnico = currentUser.role === "tecnico";
   const isAssignedTecnico = incident?.tecnico?.id === currentUser.id;
   const canTake = isTecnico && incident?.estado === "abierta" && !incident?.tecnico;
-  const canResolve = (isAssignedTecnico || isAdmin) && incident?.estado === "en_proceso";
-  const canClose = isAdmin && incident?.estado === "resuelta";
+  const canResolve = isAssignedTecnico && incident?.estado === "en_proceso";
 
   if (loading) {
     return (
@@ -290,9 +275,8 @@ export default function IncidentDetail({ incidentId, currentUser, onBack }: Prop
                 </div>
               )}
 
-              {/* Add comment — available to all roles when incident is not closed */}
-              {incident.estado !== "cerrada" && (
-                <div>
+              {/* El PDF permite comentarios durante el seguimiento de la incidencia. */}
+              <div>
                   <div className="input-group">
                     <input
                       type="text"
@@ -317,7 +301,6 @@ export default function IncidentDetail({ incidentId, currentUser, onBack }: Prop
                   </div>
                   <div className="form-text">Presiona Enter para enviar</div>
                 </div>
-              )}
             </div>
           </div>
         </div>
@@ -392,7 +375,7 @@ export default function IncidentDetail({ incidentId, currentUser, onBack }: Prop
           </div>
 
           {/* Actions card */}
-          {(canTake || canResolve || canClose) && (
+          {(canTake || canResolve) && (
             <div className="card">
               <div className="card-header">
                 <span style={{ fontWeight: 600, fontSize: "0.875rem" }}>
@@ -422,20 +405,6 @@ export default function IncidentDetail({ incidentId, currentUser, onBack }: Prop
                   >
                     <i className="bi bi-check-circle"></i>
                     Resolver incidencia
-                  </button>
-                )}
-                {canClose && (
-                  <button
-                    className="btn btn-outline-secondary d-flex align-items-center gap-2"
-                    onClick={handleClose}
-                    disabled={actionLoading}
-                  >
-                    {actionLoading ? (
-                      <span className="spinner-border spinner-border-sm"></span>
-                    ) : (
-                      <i className="bi bi-archive"></i>
-                    )}
-                    Cerrar incidencia
                   </button>
                 )}
               </div>

@@ -17,8 +17,6 @@ export default function Login({ onLogin }: Props) {
     setLoading(true);
     try {
       const res = await api.login(email, password);
-      localStorage.setItem("token", res.token);
-      localStorage.setItem("user", JSON.stringify(res.user));
       onLogin(res.user, res.token);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Credenciales inválidas. Verifica tu correo y contraseña.");
@@ -60,7 +58,7 @@ export default function Login({ onLogin }: Props) {
                 id="email"
                 type="email"
                 className="form-control"
-                placeholder="usuario@empresa.com"
+                placeholder="usuario@test.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -110,7 +108,7 @@ export default function Login({ onLogin }: Props) {
         </form>
 
         <p className="text-center text-muted mt-4 mb-0" style={{ fontSize: "0.75rem" }}>
-          Acceso exclusivo para personal autorizado
+          Pruebas: usuario@test.com o tecnico@test.com · contraseña: password123
         </p>
       </div>
     </div>

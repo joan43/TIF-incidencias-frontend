@@ -1,13 +1,10 @@
 import { useState, useEffect, useCallback } from "react";
-import { api, Incident } from "../api";
-
-const CATEGORIES = ["Hardware", "Software", "Red", "Accesos", "Correo", "Impresora", "Otro"];
+import { api, Category, Incident } from "../api";
 
 const STATUS_LABELS: Record<string, string> = {
   abierta: "Abierta",
   en_proceso: "En proceso",
   resuelta: "Resuelta",
-  cerrada: "Cerrada",
 };
 
 function StatusBadge({ estado }: { estado: string }) {
@@ -19,7 +16,7 @@ function StatusBadge({ estado }: { estado: string }) {
 }
 
 function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString("es-ES", {
+  return new Date(iso).toLocaleDateString("es-AR", {
     day: "2-digit",
     month: "short",
     year: "numeric",
@@ -33,6 +30,7 @@ interface Props {
 
 export default function IncidentList({ onViewDetail, onNewIncident }: Props) {
   const [incidents, setIncidents] = useState<Incident[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [filterEstado, setFilterEstado] = useState("");
@@ -57,6 +55,18 @@ export default function IncidentList({ onViewDetail, onNewIncident }: Props) {
   useEffect(() => {
     fetchIncidents();
   }, [fetchIncidents]);
+
+  useEffect(() => {
+    let active = true;
+    api.getCategories()
+      .then((items) => { if (active) setCategories(items); })
+      .catch((err: unknown) => {
+        if (active && !error) setError(err instanceof Error ? err.message : "No se pudieron cargar las categorías");
+      });
+    return () => { active = false; };
+    // La carga de categorías debe ejecutarse una sola vez al montar la vista.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const counts = {
     total: incidents.length,
@@ -118,7 +128,6 @@ export default function IncidentList({ onViewDetail, onNewIncident }: Props) {
                 <option value="abierta">Abierta</option>
                 <option value="en_proceso">En proceso</option>
                 <option value="resuelta">Resuelta</option>
-                <option value="cerrada">Cerrada</option>
               </select>
             </div>
             <div className="col-12 col-md-auto">
@@ -130,8 +139,8 @@ export default function IncidentList({ onViewDetail, onNewIncident }: Props) {
                 onChange={(e) => setFilterCategoria(e.target.value)}
               >
                 <option value="">Todas las categorías</option>
-                {CATEGORIES.map((c) => (
-                  <option key={c} value={c}>{c}</option>
+                {categories.map((category) => (
+                  <option key={category.id} value={category.name}>{category.name}</option>
                 ))}
               </select>
             </div>
@@ -162,7 +171,7 @@ export default function IncidentList({ onViewDetail, onNewIncident }: Props) {
       <div className="card">
         <div className="card-header d-flex align-items-center justify-content-between">
           <span style={{ fontWeight: 600, fontSize: "0.875rem" }}>
-            {loading ? "Cargando..." : `${incidents.length} incidencia${incidents.length !== 1 ? "s" : ""} encontrada${incidents.length !== 1 ? "s" : ""}`}
+            {loading ? "Cargando..." : `${incidents.length} incidencia${incidents.length !== 1 ? "s" : ""} en esta página`}
           </span>
           {(filterEstado || filterCategoria) && (
             <div className="d-flex gap-1">
