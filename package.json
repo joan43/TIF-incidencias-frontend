@@ -1,5 +1,5 @@
 {
-  "name": "figma-make-app",
+  "name": "tif-incidencias-frontend",
   "private": true,
   "version": "1.0.0",
   "type": "module",
@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
+    "check": "tsc --noEmit",
     "format": "oxfmt"
   },
   "dependencies": {
@@ -20,8 +21,9 @@
     "@vitejs/plugin-react": "^6.0.0",
     "tailwindcss": "^4.0.0",
     "@tailwindcss/vite": "^4.0.0",
-    "oxfmt": "^0.2.0",
     "typescript": "^5.7.0",
-    "vite": "^8.0.5"
+    "vite": "^8.0.5",
+    "oxfmt": "^0.2.0"
   }
 }
+
